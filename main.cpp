@@ -38,7 +38,7 @@ struct Wave{
 
     void movePieces(){
         for( auto &piece : wavePieces ){
-            piece.shape.move({5,0});
+            piece.shape.move({1,0});
         }
     }
 
