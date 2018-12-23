@@ -16,11 +16,7 @@ struct WavePiece{
         shape.setFillColor(color);
         shape.setRadius(1);
         shape.setOrigin({shape.getRadius(), shape.getRadius()});
-        shape.setPosition({pos});
-    }
-
-    void update(){
-        shape.move({1,0});
+        shape.setPosition({SCREEN_W/2, pos.y});
     }
 };
 
@@ -29,14 +25,27 @@ struct Wave{
 
     void createPieces(Vector2f pos){
         WavePiece newPiece(Color::Red, pos);
-        wavePieces.push_back(newPiece);
+        wavePieces.push_front(newPiece);
     }
 
     void deletePieces(){
-        for( auto piece : wavePieces ){
-            if(piece.shape.getPosition().x > SCREEN_W)
-                wavePieces.pop_front();
+        if(wavePieces.back().shape.getPosition().x > SCREEN_W){
+            wavePieces.pop_back();
+            return;
         }
+        
+    }
+
+    void movePieces(){
+        for( auto &piece : wavePieces ){
+            piece.shape.move({5,0});
+        }
+    }
+
+    void update(Vector2f pos){
+        createPieces(pos);
+        deletePieces();
+        movePieces();
     }
 };
 
@@ -101,15 +110,13 @@ struct WheelList{
 struct Pendulum{
     WheelList wheelList;
     Wave wave;
-
     Pendulum(){
         wheelList.createWheel(5);
     }
 
     void update(){
         wheelList.update();
-        wave.createPieces(wheelList.wheels.back().line.getTransform().transformPoint(wheelList.wheels.back().line.getSize().x, 1));   // y coord of the last wheel
-        wave.deletePieces();
+        wave.update( wheelList.wheels.back().line.getTransform().transformPoint(wheelList.wheels.back().line.getSize().x, 1) ); // last wheels coordinates
     }
 };
 
@@ -140,8 +147,9 @@ int main(){
             window.draw(wheel.line);
         }
 
-        for( auto wave : pendulum.wave.wavePieces )
+        for( auto wave : pendulum.wave.wavePieces ){
             window.draw(wave.shape);
+        }
         window.display();
     }
 }
