@@ -1,6 +1,7 @@
 #include <iostream>
 #include <SFML/Graphics.hpp>
 #include <vector>
+#include <list>
 #include <ctime>
 
 using namespace std;
@@ -9,24 +10,42 @@ using namespace sf;
 #define SCREEN_W 1366
 #define SCREEN_H 768
 
+struct WavePiece{
+    CircleShape shape;
+    WavePiece(Color color, Vector2f pos){
+        shape.setFillColor(color);
+        shape.setRadius(1);
+        shape.setOrigin({shape.getRadius(), shape.getRadius()});
+        shape.setPosition({pos});
+    }
+
+    void update(){
+        shape.move({1,0});
+    }
+};
+
+struct Wave{
+    list<WavePiece> wavePieces;
+
+    void createPieces(Vector2f pos){
+        WavePiece newPiece(Color::Red, pos);
+        wavePieces.push_back(newPiece);
+    }
+
+    void deletePieces(){
+        for( auto piece : wavePieces ){
+            if(piece.shape.getPosition().x > SCREEN_W)
+                wavePieces.pop_front();
+        }
+    }
+};
+
 
 struct Wheel{
     RectangleShape line;
     CircleShape circle;
     float rotationRate = ((rand()%10) - 5);
     Color waveColor = Color(rand()%255, rand()%255, rand()%255);
-
-    void update(){
-        line.rotate(rotationRate);
-
-    }
-    
-    void update(Vector2f newPos){
-        circle.setPosition(newPos);
-        line.setPosition(newPos);
-        line.rotate(rotationRate);
-
-    }
 
     Wheel(float rad, Vector2f pos){
         circle.setRadius(rad);
@@ -42,6 +61,17 @@ struct Wheel{
         line.setPosition(circle.getPosition());
     }
 
+    void update(){
+        line.rotate(rotationRate);
+    }
+    
+    void update(Vector2f newPos){
+        circle.setPosition(newPos);
+        line.setPosition(newPos);
+        line.rotate(rotationRate);
+    }
+
+
 };
 
 struct WheelList{
@@ -53,6 +83,7 @@ struct WheelList{
     }
 
     void update(){
+        list<Vector2f> allPos;
         wheels[0].update();
         for(int i=1; i<wheels.size(); i++){
             wheels[i].update(wheels[i-1].line.getTransform().transformPoint(wheels[i-1].line.getSize().x, 1) );
@@ -67,14 +98,28 @@ struct WheelList{
     }
 };
 
+struct Pendulum{
+    WheelList wheelList;
+    Wave wave;
+
+    Pendulum(){
+        wheelList.createWheel(5);
+    }
+
+    void update(){
+        wheelList.update();
+        wave.createPieces(wheelList.wheels.back().line.getTransform().transformPoint(wheelList.wheels.back().line.getSize().x, 1));   // y coord of the last wheel
+        wave.deletePieces();
+    }
+};
+
 int main(){
     RenderWindow window(VideoMode(SCREEN_W, SCREEN_H), "Pendulum to Wave", Style::Default);
     window.setFramerateLimit(60);
     window.setVerticalSyncEnabled(true);
     srand(time(NULL));
 
-    WheelList pendulum;
-    pendulum.createWheel(5);
+    Pendulum pendulum;
 
     while( window.isOpen() ){
         Event e;
@@ -90,10 +135,13 @@ int main(){
         pendulum.update();
         window.clear(Color::White);
 
-        for( auto wheel : pendulum.wheels ){
+        for( auto wheel : pendulum.wheelList.wheels ){
             window.draw(wheel.circle);
             window.draw(wheel.line);
         }
+
+        for( auto wave : pendulum.wave.wavePieces )
+            window.draw(wave.shape);
         window.display();
     }
 }
